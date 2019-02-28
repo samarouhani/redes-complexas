@@ -1,0 +1,154 @@
+import random
+
+import networkx as nx
+
+import distributions
+
+def add_zeros(*lists):
+
+    max_len = len(max(lists, key = len))
+
+    for l in lists:
+        l += (max_len - len(l)) * [0]
+
+class simulator(object):
+
+    def __init__(self, network):
+
+        self.network = max(nx.connected_component_subgraphs(network), key = len)
+        self.deg_dist = distributions.distribution(nx.degree(self.network).values())
+        self.critical = self.calc_degree_nth_moment(1) / float(self.calc_degree_nth_moment(2))
+
+        self._contact_sis = None
+        self._contact_sir = None
+        self._reactive_sis = None
+        self._reactive_sir = None
+
+    @property
+    def contact_sis(self):
+        if self._contact_sis is None:
+            self._contact = self.simulate_contact_sis()
+        return self._contact_sis
+
+    @property
+    def contact_sir(self):
+        if self._contact_sir is None:
+            self._contact_sir = self.simulate_contact_sir()
+        return self._contact_sir
+
+    @property
+    def reactive_sis(self):
+        if self._reactive_sis is None:
+            self._reactive_sis = self.simulate_reactive_sis()
+        return self._reactive_sis
+
+    @property
+    def reactive_sir(self):
+        if self._reactive_sir is None:
+            self._reactive_sir = self.simulate_reactive_sir()
+        return self._reactive_sir
+
+    def calc_degree_nth_moment(self, n):
+        sum = 0
+        for i, p in self.deg_dist.items():
+            sum += (i ** n) * p
+        return sum
+
+    def simulate(self, source, beta, mu, reactive, sis, immune_rate = 0.0, immunize_hub = False):
+    
+        susceptible = set(self.network.nodes())
+        infected = set()
+        recovered = set()
+        immune = set()
+        size = len(self.network)
+    
+        steps = 0
+        susceptible_fraction = []
+        infected_fraction = []
+        recovered_fraction = []
+    
+        degs = nx.degree(self.network)
+        immune_amount = int(round(immune_rate * len(self.network)))
+    
+        if immune_amount > 0:
+        
+            immune_order = sorted(self.network.nodes(), key = degs.__getitem__ if immunize_hub else lambda x: random.random())
+            immune = set(immune_order[:immune_amount])
+        
+            if source in immune:
+                immune.remove(source)
+                immune.add(immune_order[immune_amount])
+    
+        susceptible -= immune
+
+        susceptible.remove(source)
+        infected.add(source)
+
+        while len(infected) > 0 and (steps < 5 * len(self.network) if sis else True):
+        
+            i = random.choice(list(infected))
+            neighbors = self.network.neighbors(i)
+            next = neighbors if reactive else [random.choice(neighbors)]
+
+            if sis:
+                for j in next:
+                    if j in infected and random.random() < mu:
+                        infected.remove(j)
+                        susceptible.add(j)
+        
+            for j in next:
+                if j in susceptible and random.random() < beta:
+                    susceptible.remove(j)
+                    infected.add(j)
+        
+            if random.random() < mu:
+                infected.remove(i)
+                (susceptible if sis else recovered).add(i)
+
+            susceptible_fraction.append(len(susceptible) / float(size))
+            infected_fraction.append(len(infected) / float(size))
+            recovered_fraction.append(len(recovered) / float(size))
+        
+            steps += 1
+        
+        return susceptible_fraction, infected_fraction, recovered_fraction
+
+    def simulate_all(self, beta, mu, reactive, sis, immune_rate = 0.0, immunize_hub = False):
+
+        sums = ([], [], [])
+        counts = []
+        counted = False
+
+        for node in self.network.nodes():
+
+            sim = self.simulate(node, beta, mu, reactive, sis, immune_rate, immunize_hub)
+
+            for _sums, _sim in zip(sums, sim):
+            
+                if len(_sim) > len(_sums):
+                    _sums.extend((len(_sim) - len(_sums)) * [0])
+                    counts.extend((len(_sim) - len(counts)) * [0])
+
+                for i in range(len(_sim)):
+
+                    _sums[i] += _sim[i]
+                    if not counted:
+                        counts[i] += 1
+
+                counted = True
+
+            counted = False
+
+        return tuple([[sum / float(count) for sum, count in zip(_sums, counts)] for _sums in sums])
+
+    def simulate_contact_sis(self, beta = 0.5, mu = 0.2, immune_rate = 0.0, immunize_hub = False):
+        return self.simulate_all(beta, mu, False, True, immune_rate, immunize_hub)
+
+    def simulate_reactive_sis(self, beta = 0.2, mu = 1.0, immune_rate = 0.0, immunize_hub = False):
+        return self.simulate_all(beta, mu, True, True, immune_rate, immunize_hub)
+
+    def simulate_contact_sir(self, beta = 0.5, mu = 0.2, immune_rate = 0.0, immunize_hub = False):
+        return self.simulate_all(beta, mu, False, False, immune_rate, immunize_hub)
+
+    def simulate_reactive_sir(self, beta = 0.2, mu = 1.0, immune_rate = 0.0, immunize_hub = False):
+        return self.simulate_all(beta, mu, True, False, immune_rate, immunize_hub)
