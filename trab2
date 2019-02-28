@@ -1,0 +1,157 @@
+"""
+
+TRABALHO 2 DE SISTEMAS COMPLEXOS
+
+"""
+
+# Primeiro passo eh instalar um ambiente virtual para python 3
+
+sudo apt-get install python3-pip python3-dev python-virtualenv # for Python 3.n
+virtualenv --system-site-packages -p python3 sist_complexos # for Python 3.n
+
+# Para instalar a nova versao do pip
+#python -m pip install -U pip setuptools
+
+# instalar o matplotlib
+#python -m pip install matplotlib
+
+# Ir dentro da pasta do networkx pela linha de comando
+#python setup.py install
+# ou sem pasta nenhuma, direto no terminal 
+#python -m pip install networkx
+
+# ir dentro da pasta do powerlaw pela linha de comando
+# pip install powerlaw
+# ou sem pasta nenhuma direto no terminal 
+#python -m pip install powerlaw
+
+
+# para instalart o igraph
+# python -m pip install igraph
+
+# para instalar o pacote plfit precisa ter instalado o pacote cython
+#python -m pip install cython
+#python -m pip install plfit
+
+
+from __future__ import print_function
+import networkx as nx
+#from igraph import *
+import matplotlib as plt
+import cmath
+import math
+import powerlaw
+import plfit as pl
+import operator
+import numpy
+import igraph as ig
+from networkx.algorithms import community
+
+import keyword # para o print que virou uma funcao
+#import funcoes as fx
+
+#import Cython
+from networkx.drawing.nx_pydot import write_dot
+from numpy import log
+
+### Rotina que le o grafo
+#base do hamsterster
+g = nx.read_weighted_edgelist(r"/home/sama/Documents/sist_complexos/hamsterster/out.petster-friendships-hamster-uniq", "%", create_using = nx.Graph(), nodetype = int)
+maiorComponenteConexa = max(nx.connected_component_subgraphs(g), key=len)
+
+########## QUESTAO 1: 
+ca = nx.degree_assortativity_coefficient(CompConvexaMax))
+### Coeficiente de assortatividade
+print("%3.1f"%ca)
+
+
+########## QUESTAO 2:
+### Determinar o grafico de k X knn(k)
+def pearson(serie1, serie2):
+
+    x_mean = mean(serie1)
+    y_mean = mean(serie2)
+
+    sum1 = 0
+    sum2 = 0
+    sum3 = 0
+    n = len(serie1) - 1
+    for node_k in range(0, n):
+        sum1 += ((serie1[node_k] - x_mean) * (serie2[node_k] - y_mean))
+        sum2 += ((serie1[node_k] - x_mean) ** 2)
+        sum3 += ((serie2[node_k] - y_mean) ** 2)
+
+    pearson_corr = (sum1 / float((sqrt(sum2)) * (sqrt(sum3))))
+
+    return pearson_corr
+
+
+def spearman(x, y):
+
+    assert len(x) == len(y)
+
+    n = len(x)
+    _x = sorted(x)
+    _y = sorted(y)
+
+    sum = 0.0
+
+    for i in xrange(n):
+
+        pxi = _x.index(x[i])
+        _x[pxi] = None
+
+        pyi = _y.index(y[i])
+        _y[pyi] = None
+
+        sum += (pxi - pyi) * (pxi - pyi)
+
+    spearman = 1.0 - (6.0 * sum / float(n ** 3 - n))
+
+    return spearman
+	
+x, y = functions.graph(nx.k_nearest_neighbors(maiorComponenteConexa))
+plt.plot(x, y, 'o--')
+plt.title("Degree VS KNN", fontsize=20)
+plt.xlabel("$k_i$", fontsize=20)
+plt.ylabel("$knn_i$", fontsize=20)
+plt.text(0.68, 0.78, r"$a = " + "{:.5f}".format(
+    nx.degree_assortativity_coefficient(maiorComponenteConexa)) + r"$" + "\n" + r"$r = " + "{:.5f}".format(
+        pearson(x, y)) + r"$" + "\n" + r"$\rho = " + "{:.5f}".format(
+        spearman(x, y)) + r"$", fontsize=20, transform=plt.gca().transAxes,
+            bbox={"facecolor": "none", "pad": 10})
+plt.show()
+
+
+########## QUESTAO 4:
+### Modularidade
+
+### Baseado em edge betweenness centrality
+betweenness = nx.betweenness_centrality(maiorComponenteConexa)
+M1 = nx.algorithms.community.modularity(maiorComponenteConexa, betweenness)
+
+# a funcao edge_betweenness_centrality retorna um dicionario de arestas com o betweenness_centrality como valor
+betweenness_centrality_baseado_em_arestas = edge_betweenness_centrality(maiorComponenteConexa)
+M2 = nx.algorithms.community.modularity(maiorComponenteConexa, betweenness_centrality_baseado_em_arestas)
+
+### fast-greedy
+fast_greedy = ig.greedy_branching(maiorComponenteConexa)
+
+### eigen vector eh o mesmo que o algoritmo de Newman
+"""
+	>>> G = nx.barbell_graph(3, 0)
+    >>> nx.algorithms.community.modularity(G, [{0, 1, 2}, {3, 4, 5}])
+    0.35714285714285704
+"""
+
+#newman = nx.algorithms.community.modularity(maiorComponenteConexa, <comunidade>)
+communities_generator = community.girvan_newman(maiorComponenteConexa)
+
+"""
+eigenvector = nx.eigenvector_centrality(maiorComponenteConexa)
+nx.algorithms.community.modularity(maiorComponenteConexa, eigenvector)
+"""
+
+# walktrap = latapay
+
+current_flow_betweenness_centrality
