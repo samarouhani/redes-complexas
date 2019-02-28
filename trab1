@@ -1,1 +1,339 @@
+# Para instalar a nova versao do pip
+#python -m pip install -U pip setuptools
+
+# Ir dentro da pasta matplotlib e instalar
+#python -m pip install matplotlib
+
+# Ir dentro da pasta do networkx pela linha de comando
+#python setup.py install
+
+# ir dentro da pasta do power law pela linha de comando
+# pip install powerlaw
+
+# para instalart o igraph
+# pip install igraph
+
+from __future__ import print_function
+import networkx as nx
+#from igraph import *
+import matplotlib.pyplot as plt
+import cmath
+import math
+import powerlaw
+import plfit as pl
+import operator
+import numpy
+
+import keyword # para o print que virou uma funcao
+#import funcoes as fx
+
+#import Cython
+from networkx.drawing.nx_pydot import write_dot
+from numpy import log
+
+########## QUESTAO 1: 
+### Rotina que le o grafo
+g = nx.read_weighted_edgelist(r"G:\Sama\SistComplexos\Bases_de_Dados\social\out.petster-friendships-hamster-uniq", "%", create_using = nx.Graph(), nodetype = int)
+
+#plt.figure(0)
+#nx.draw(g)
+#plt.show()
+
+########## QUESTAO 1: 
+###Maior componente conexa
+maiorComponenteConexa = max(nx.connected_component_subgraphs(g), key=len)
+
+########## QUESTAO 2: 
+###Distribuicao do Grau
+# retorna uma lista de frequencia de cada grau
+# o valor do grau eh o indice da lista e o conteudo eh sua frequencia
+#distribuicao_grau = nx.degree_histogram(maiorComponenteConexa)
+#print("Distribuicao do grau")
+#print(distribuicao_grau)
+
+#degree_sequence = sorted([d for n,d in maiorComponenteConexa.degree()], reverse=True) # degree sequence
+#print ("Degree sequence", degree_sequence)
+
+########## QUESTAO 2: 
+### Distribuicao do Grau 
+print("Distribuicao do grau versao 1: ")
+distribuicao_grau1 = nx.degree(maiorComponenteConexa).values()
+print(distribuicao_grau1)
+
+
+########## QUESTAO 2: 
+### distribuicao de probabilidade acumulada complementar
+
+FDPC = powerlaw.ccdf(maiorComponenteConexa)
+# A funcao acima retorna 2 arrays: 
+# - a primeira ordenada com os valores unicos nos grafo
+# - a segunda eh um array de probabilidades, ou seja, a quantia de dados que 
+# eh maior ou igual aos dados do primeiro array 
+
+print("Distribuicao de probabilidade acumulada complementar")
+print("Array de valores unicos")
+print(FDPC[0])
+print("Array de probabilidades dos dados do array acima")
+print(FDPC[1])
+
+
+########## QUESTAO 2: 
+### Teste Kolmogorov-Smirnov
+# Retorna a distancia D entre a distribuicao e os dados
+#POWERLAW	
+#powerlaw = pl.plfit(maiorComponenteConexa)
+#print ("Expoente versao plfit: %d" % powerlaw.alpha)
+#print ("Kmin versao plfit: %d" % powerlaw.xmin)
+
+fit = powerlaw.Fit(maiorComponenteConexa)
+print("Alpha: ",fit.alpha)
+print("Sigma: ",fit.sigma)
+print("D: ",fit.D)
+#dist = powerlaw.power_law_ks_distance(maiorComponenteConexa, fit.alpha, fit.sigma )
+#print("Teste Kolmogorov-Smirnov, ou seja, distancia D entre a distribuicao e os dados")
+#print(dist)
+
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Grau Medio
+Nos = maiorComponenteConexa.order()
+Vertices = maiorComponenteConexa.size()
+avg_degree = float(Vertices)/Nos
+print ("Nodes: ", Nos)
+print ("Edges: ", Vertices)
+print ("Grau Medio: ", avg_degree)
+
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Segundo momento da distribuicao do grau
+	# primeiro momento eh a esperanca, que eh o somatorio do grau vezes a probabilidade
+	# segundoMomento = Somatorio do grau ao quadrado vezes a probabilidade, ou seja, eh a variancia
+	# terceiro momento = eh a obliquidade(simetria em torno da media)
+	# quarto momento = eh a curtose(quao achatados estao os dados)
+	# probabilities eh o dicionario que possui como chave o grau e o conteudo a probabilidade daquele grau aparecer
+
+
+probabilidade = powerlaw.pdf(maiorComponenteConexa)	
+print(probabilidade)	
+
+# Segundo momento da distribuicao do Grau
+seg_momento = round(numpy.var(distribuicao_grau1), 10)
+print("Segundo momento: "+str(seg_momento))
+
+
+
+def df(maiorComponenteConexa):
+
+    probabilities = {}
+    for datum in maiorComponenteConexa:
+        if datum not in probabilities:
+            probabilities[datum] = 1
+        else:
+            probabilities[datum] += 1
+
+    for k in probabilities:
+        probabilities[k] /= len(maiorComponenteConexa)
+
+    return probabilities
+
+probabilities = df(maiorComponenteConexa)
+
+
+def segundoMomento(maiorComponenteConexa,probabilities):
+	
+	segMomento=0
+	for x in probabilities.keys():
+		segMomento = segMomento + float(((x**2)* probabilities[x]))
+	
+	print("Segunto Momento: ",segMomento)
+	return segMomento
+
+print("Segundo Momento da distribuicao do grau versao do Sama")
+segMomento = segundoMomento(maiorComponenteConexa,probabilities)	
+print(segMomento)	
+'''
+	
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Entropia de Shannon da distribuicao do grau (H=-sum P(k)*logP(k)).
+# Essa funcao foi desenvolvida em um grupo de estudos realizado no dia
+# 02/09/2016, juntamente com o Sady. Eh a funcao distribuicao de probabilidade
+'''
+def EntShanon(probabilities):
+	entShanon=0
+	for x in probabilities:
+		entShanon = entShanon + (probabilities[x].values()* 
+								 cmath.log10(probabilities[x].values()))
+	
+	print("Entropia de Shanon: ",entShanon)	
+	return entShanon
+
+print("Entropia de Shanon versao 1")	
+entShanon = EntShanon(probabilidade)
+print (entShanon)
+
+# Contar os graus - Ki
+ki = {}
+for n in maiorComponenteConexa.nodes():
+    k = maiorComponenteConexa.degree(n)
+    if k not in ki:
+        ki[k] = 0
+    ki[k] += 1
+
+# Ja temos os ki's agora eh preciso calcular os P(K) e tambem acumular eles
+pki = {}
+pkc = {}
+acc = 0
+
+for k in ki.items():
+    pki[k[0]] = float(k[1])/len(maiorComponenteConexa.degree())
+    pkc[k[0]] = float(acc) + pki[k[0]]
+    vant = pkc[k[0]]
+    pkc[k[0]] = 1 - pkc[k[0]]
+
+x = numpy.asarray(pki.values())
+p = x/x.sum(axis=0, keepdims=True)
+H = (-p*numpy.log10(p)).sum(axis=0)
+print("A entropia de Shannon versao 2 eh: "+str(round(H,3)))
+
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Media do coeficiente de aglomeracao local
+print("Media do coeficiente de aglomeracao local")
+print(nx.average_clustering(g))
+
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Coeficiente de aglomeracao da rede toda pela formula da transitividade
+# Todos os possiveis triangulos. A funcao retorna um float dizendo um possivel numero de triangulos
+print("Transitividade: todos os possiveis triangulos")
+print(nx.transitivity(g))
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Media dos menores caminhos
+print("Media dos menores caminhos: ",nx.average_shortest_path_length(maiorComponenteConexa))
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Eficiencia
+#print("Eficiencia Global: ", float(nx.local_efficiency(maior_componente_conexa)))
+
+########## QUESTAO 3: MEDIDAS GLOBAIS
+### Diametro
+print("Diametro: ", nx.diameter(maiorComponenteConexa))
+
+########## QUESTAO 4: CLUSTERING
+### Distribuicao de probabilidade acumulada (F(x) = P(X < x)) do coeficiente de aglomeracao local (cc(i)).
+# numero de triangulo pelo numeros triplas conectadas
+print("Cluster - Distribuicao acumulada do coeficiente de aglomeracao local")
+cci = {}
+cci = nx.clustering(g)
+print(cci)
+# retorna um dicionario em que a chave eh o grau e o valor eh clustering
+
+
+########## QUESTAO 4: CLUSTERING
+### Coeficiente de correlacao de Pearson
+# Grafico de k(i) X cc(i) e coeficiente de correlacao de pearson
+
+ki = {}
+cci = {}
+for x in g.nodes():
+    ki[x] = g.degree(x)
+    cci[x] = nx.clustering(g, x)
+
+# Ordenando a lista 
+sorted_ki = sorted(ki.items(), key=operator.itemgetter(0), reverse=True)
+a = [x[1] for x in sorted_ki]
+sorted_cci = sorted(cci.items(), key=operator.itemgetter(0), reverse=True)
+b = [x[1] for x in sorted_cci]
+
+plt.figure(1)
+plt.suptitle('Clustering')
+plt.title('k(i) X cc(i)')
+plt.scatter(a, b, s=15, color='g')
+plt.savefig("hamsterfriendship_ki_x_cci.png")
+plt.show()
+print("Coeficiente de Pearson: " + str(numpy.corrcoef(ki.values(), cci.values())[1][0]))
+
+
+########## QUESTAO 4: CLUSTERING
+### Coeficiente de aglomeracao em funcao do grau
+print("Coeficiente de aglomeracao em funcao do grau")
+print(nx.average_clustering(maiorComponenteConexa))
+
+
+#Grafico de cc(k)
+
+kcc = {}
+ckcc = {}
+for n in g.nodes():
+    nk = g.degree(n)
+    if not nk in kcc:
+        kcc[nk] = [n]
+        ckcc[nk] = [nx.clustering(g, n)]
+    else:
+        kcc[nk].append(n)
+        ckcc[nk].append(nx.clustering(g, n))
+mkcc = {}
+
+for c in sorted(ckcc.keys()):
+    mkcc[c] = numpy.mean(ckcc[c])
+
+sorted_mkcc = sorted(mkcc.items(), key=operator.itemgetter(0), reverse=True)
+a = [x[0] for x in sorted_mkcc]
+b = [x[1] for x in sorted_mkcc]
+plt.figure(6)
+plt.suptitle('Clustering')
+plt.title('cc(k)')
+plt.scatter(a, b, color='g')
+plt.savefig("hamsterfriendship_cck.png")
+plt.show()
+
+
+'''
+d = {1:5, 5:2, 2:3}
+d.KEYS() = [1,5,2]
+d.VALUES() = [5,2,3]
+
+## O SORTED RETORNA UMA LISTA
+D.ITENS() = [(1,5),(5,2),(2,3)]
+SORTED(D.ITENS()) VAI RESULTAR ASSIM: [(1,5),(2,3),(5,2)]
+TEM QUE DIVIDIR EM DOIS VETORES: UM SO PARA OS INDICES E OUTRO VETOR SO PARA OS VALORES:
+- X = [1,2,5]
+- Y = [5,3,2]
+
+X=[]
+for t in sdi
+	X.append(t[0])
+
+'''
+
+####### GRAFICOS PARA GERAR
+
+# Distribuicao do grau
+# distribuicao acumulada complementar do grau
+# plplot do kmin e alpha
+# distribuicao acumulada do cluster
+# dispersao do clustering
+# clustering medio por grau
+'''
+
+
+import matplotlib.pyplot as plt
+plt.plot([1,2,3,4], [1,4,9,16], 'ro')
+plt.axis([0, 6, 10, 20])
+plt.show()
+
+
+
+x={1,2,3,4,5,6,7,8,9,10,11}
+y=[2,4,6,8,10,12,14,16,18,20]
+
+plt.plot([x],[y], 'ro')
+plt.axis([0,10,0,20])
+plt.show()
+
+
+plt.plot([distribuicao_grau1])
+plt.ylabel('some numbers')
+plt.show()
 
