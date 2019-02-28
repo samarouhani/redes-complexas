@@ -1,0 +1,192 @@
+import sys
+
+import matplotlib.pyplot as plot
+
+import random_graphs
+from simulator import simulator
+
+def ex1_1(er8, ba8):
+
+    # SIS
+    y = er8.reactive_sis
+    x = range(1, len(y[0]) + 1)
+    plot.plot(x, y[0], 'b-', label = "ER's susceptible")
+    plot.plot(x, y[1], 'b--', label = "ER's infected")
+    plot.plot(x, y[2], 'b:', label = "ER's recovered")
+
+    y = ba8.reactive_sis
+    x = range(1, len(y[0]) + 1)
+    plot.plot(x, y[0], 'r-', label = "BA's susceptible")
+    plot.plot(x, y[1], 'r--', label = "BA's infected")
+    plot.plot(x, y[2], 'r:', label = "BA's recovered")
+
+    plot.xlabel(r"$t$")
+    plot.ylabel(r"fraction")
+    plot.title("Reactive SIS method evolution")
+    plot.legend(fontsize = 11, ncol = 2)
+    plot.show()
+
+    # SIR
+    y = er8.reactive_sir
+    x = range(1, len(y[0]) + 1)
+    plot.plot(x, y[0], 'b-', label = "ER's susceptible")
+    plot.plot(x, y[1], 'b--', label = "ER's infected")
+    plot.plot(x, y[2], 'b:', label = "ER's recovered")
+
+    y = ba8.reactive_sir
+    x = range(1, len(y[0]) + 1)
+    plot.plot(x, y[0], 'r-', label = "BA's susceptible")
+    plot.plot(x, y[1], 'r--', label = "BA's infected")
+    plot.plot(x, y[2], 'r:', label = "BA's recovered")
+
+    plot.xlabel(r"$t$")
+    plot.ylabel(r"fraction")
+    plot.title("Reactive SIR method evolution")
+    plot.legend(fontsize = 11, ncol = 2)
+    
+    plt.savefig(script_dir + "\\" + name)
+    plt.close()
+    del x,y1,y2
+    gc.collect()
+	
+	#plot.show()
+    return
+
+def ex1_2(er8, ba8, ws0001, ws01):
+
+    y = er8.reactive_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "ER")
+
+    y = ba8.reactive_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "BA")
+
+    y = ws0001.reactive_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "WS ($p=0.001$)")
+
+    y = ws01.reactive_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "WS ($p=0.1$)")
+
+    plot.xlabel(r"$t$")
+    plot.ylabel(r"Infected fraction")
+    plot.title("Influence from network topology on epidemic spreading")
+    plot.legend(fontsize = 11, ncol = 2)
+    
+    plt.savefig(script_dir+"\\"+name)
+    plt.close()
+    del x,y1,y2
+    gc.collect()
+	
+	#plot.show()
+    return
+
+def ex1_3(er8, ba8):
+
+    # ER
+    y = er8.contact_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "Contact")
+
+    y = er8.reactive_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "Reactive")
+
+    plot.xlabel(r"$t$")
+    plot.ylabel(r"Infected fraction")
+    plot.title("Epidemic spreading in Erdos-Reyni graph")
+    plot.legend(fontsize = 11)
+    plot.show()
+
+    # BA
+    y = ba8.contact_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "Contact")
+
+    y = ba8.reactive_sir[1]
+    x = range(1, len(y) + 1)
+    plot.plot(x, y, label = "Reactive")
+
+    plot.xlabel(r"$t$")
+    plot.ylabel(r"Infected fraction")
+    plot.title("Epidemic spreading in Barabasi-Albert graph")
+    plot.legend(fontsize = 11)
+    
+    plt.savefig(script_dir+"\\"+name)
+    plt.close()
+    del x,y1,y2
+    gc.collect()
+	
+	#plot.show()
+    return
+
+def ex1_4(er10, ba10):
+
+    betas = [i / 100.0 for i in range(0, 51, 5)]
+    lambdas = betas # [beta / 1.0 for beta in betas] == betas
+
+    y = [er10.simulate_reactive_sis(beta = beta)[1][-1] for beta in betas]
+    plot.plot(betas, y, 'b-', label = "ER")
+    plot.axvline(er10.critical, c = 'b', ls = '--', label = r"$\lambda_c$ for ER")
+
+    y = [ba10.simulate_reactive_sis(beta = beta)[1][-1] for beta in betas]
+    plot.plot(betas, y, 'r-', label = "BA")
+    plot.axvline(ba10.critical, c = 'r', ls = '--', label = r"$\lambda_c$ for BA")
+
+    plot.xlabel(r"$\lambda$")
+    plot.ylabel(r"Infected fraction in last step")
+    plot.title(r"Influence from infection and recovery rates on epidemic spreading")
+    plot.legend(fontsize = 11, ncol = 2)
+    
+    plt.savefig(script_dir+"\\"+name)
+    plt.close()
+    del x,y1,y2
+    gc.collect()
+	
+	#plot.show()
+    return
+
+
+def ex2(ba8):
+
+    x = [i / 100.0 for i in range(5, 100, 5)]
+    
+    y = [ba8.simulate_reactive_sir(immune_rate = p, immunize_hub = False)[2][-1] for p in x]
+    plot.plot(x, y, label = "Random")
+
+    y = [ba8.simulate_reactive_sir(immune_rate = p, immunize_hub = True)[2][-1] for p in x]
+    plot.plot(x, y, label = "Hubs first")
+
+    plot.xlabel(r"Immunne fraction")
+    plot.ylabel(r"Recovered fraction in last step")
+    plot.title("Influence from immunization policy in epidemic spreading")
+    plot.legend(fontsize = 11)
+    
+    plt.savefig(script_dir+"\\"+name)
+    plt.close()
+    del x,y1,y2
+    gc.collect()
+	
+	#plot.show()
+    return
+
+def main():
+
+    er8 = simulator(random_graphs.erdos_reyni(1000, 8)) # lc = 0.111905236482
+    er10 = simulator(random_graphs.erdos_reyni(1000, 10)) # lc = 0.091155317241
+    ba8 = simulator(random_graphs.barabasi_albert(1000, 8)) # lc = 0.0555857854422
+    ba10 = simulator(random_graphs.barabasi_albert(1000, 10)) # lc = 0.0517296954447
+    ws01 = simulator(random_graphs.watts_strogatz(1000, 8, 0.1)) # lc = 0.123548307388
+    ws0001 = simulator(random_graphs.watts_strogatz(1000, 8, 0.001)) # lc = 0.124968757811
+
+    ex1_1(er8, ba8)
+    ex1_2(er8, ba8, ws0001, ws01)
+    ex1_3(er8, ba8)
+    ex1_4(er10, ba10)
+    ex2(ba8)
+	#return 0
+
+if __name__ == "__main__":
+	sys.exit(int(main() or 0))
